@@ -1,0 +1,317 @@
+section,item,column_id,column_label,value,note
+protocol,引擎,,,Strata 0.2.2 / engine 0.1.47-linux-x86_64-cuda-cuda13,
+protocol,镜像,,,ghcr.nju.edu.cn/niko1221/strata:0.2.2-cuda13（digest sha256:17e96f76fb85ee47b445b38ebfe9e4190b96ebde522e109d40efa2f2404a4503）,
+protocol,模型,,,Qwen3.8-Flash-Next Q2_0，混合精度（2-bit 专家 + 4~6 bit 投影 + BF16 超连接）,
+protocol,模型规模,,,"125B 级 MoE，48 层 × 512 专家 = 24,576 个专家槽；每 token 每层路由 10 个",
+protocol,KV Cache,,,int8，64K 窗口,
+protocol,投机解码,,,MTP 草稿层开启，接受率 63.5%–64.0%,
+protocol,官方基准口径,,,strata bench run 标准协议，thinking=xhigh，512 token 上限,
+protocol,并发扫描口径,,,"每请求 192 输出 token，客户端数 1,2,4,8,16",
+protocol,采样口径,,,宿主 GPU/CPU/RAM 2 s 一次；服务端 /metrics 5 s 一次,
+protocol,指标定义,,,decode = 单流稳态 tok/s；TTFT = 首 token 延迟；prefill = 提示词处理 tok/s；聚合 = 全客户端 tok/s 之和,
+hardware,GPU1（承载 Strata）,,,"NVIDIA RTX 5090，32,607 MiB，功耗上限 575 W",
+hardware,GPU0,,,"RTX 4090 48 GB，vLLM 常驻 43,573 MiB，压测期间算力占用 0%（未参与）",
+hardware,CPU,,,Xeon Gold 5218 ×2（Cascade Lake，无 AVX512-BF16 → 专家核走 AVX-2 回退）,
+hardware,内存,,,125.6 GiB,
+hardware,PCIe,,,Gen3 ×16，实测带宽 13.9 GB/s（本轮的主要瓶颈）,
+hardware,系统,,,Ubuntu 20.04 容器（宿主 glibc 过老，原生二进制跑不起来）,
+hardware,磁盘占用,,,模型 74 GB + pack 1.4 GB + MTP 6.5 GB ≈ 82 GB,
+configs,上下文,R1,第一轮·共享 5090,32K,
+configs,上下文,B1,B1·独占 32K,32K,
+configs,上下文,B2a,B2a·parallel=4,32K,
+configs,上下文,B2b,B2b·64K,64K,
+configs,上下文,B2c,B2c·GPU 读图,32K,
+configs,上下文,B2d,B2d·64K+2槽,64K,
+configs,上下文,B3,B3·推荐配置,64K,
+configs,parallel（slot 数）,R1,第一轮·共享 5090,1,
+configs,parallel（slot 数）,B1,B1·独占 32K,1,
+configs,parallel（slot 数）,B2a,B2a·parallel=4,4,
+configs,parallel（slot 数）,B2b,B2b·64K,1,
+configs,parallel（slot 数）,B2c,B2c·GPU 读图,1,
+configs,parallel（slot 数）,B2d,B2d·64K+2槽,2,
+configs,parallel（slot 数）,B3,B3·推荐配置,1,
+configs,读图器,R1,第一轮·共享 5090,CPU,
+configs,读图器,B1,B1·独占 32K,CPU,
+configs,读图器,B2a,B2a·parallel=4,CPU,
+configs,读图器,B2b,B2b·64K,CPU,
+configs,读图器,B2c,B2c·GPU 读图,GPU,
+configs,读图器,B2d,B2d·64K+2槽,GPU,
+configs,读图器,B3,B3·推荐配置,GPU,
+configs,"专家缓存槽位 / 24,576",R1,第一轮·共享 5090,"5,784（23.5%）",
+configs,"专家缓存槽位 / 24,576",B1,B1·独占 32K,"19,530（79.5%）",
+configs,"专家缓存槽位 / 24,576",B2a,B2a·parallel=4,"17,789",
+configs,"专家缓存槽位 / 24,576",B2b,B2b·64K,"19,488",
+configs,"专家缓存槽位 / 24,576",B2c,B2c·GPU 读图,"18,282",
+configs,"专家缓存槽位 / 24,576",B2d,B2d·64K+2槽,"17,279",
+configs,"专家缓存槽位 / 24,576",B3,B3·推荐配置,"18,240",
+configs,专家缓存大小,R1,第一轮·共享 5090,7.45 GiB,
+configs,专家缓存大小,B1,B1·独占 32K,25.14 GiB,
+configs,专家缓存大小,B2a,B2a·parallel=4,22.90 GiB,
+configs,专家缓存大小,B2b,B2b·64K,25.09 GiB,
+configs,专家缓存大小,B2c,B2c·GPU 读图,23.54 GiB,
+configs,专家缓存大小,B2d,B2d·64K+2槽,22.25 GiB,
+configs,专家缓存大小,B3,B3·推荐配置,23.48 GiB,
+configs,c=1 decode,R1,第一轮·共享 5090,140.6 tok/s,
+configs,c=1 decode,B1,B1·独占 32K,204.3 tok/s,
+configs,c=1 decode,B2a,B2a·parallel=4,185.7 tok/s,
+configs,c=1 decode,B2b,B2b·64K,—,
+configs,c=1 decode,B2c,B2c·GPU 读图,—,
+configs,c=1 decode,B2d,B2d·64K+2槽,128.9–193.9 tok/s,
+configs,c=1 decode,B3,B3·推荐配置,218.9 tok/s,
+configs,c=1 TTFT,R1,第一轮·共享 5090,0.240 s,
+configs,c=1 TTFT,B1,B1·独占 32K,0.16 s,
+configs,c=1 TTFT,B2a,B2a·parallel=4,0.18 s,
+configs,c=1 TTFT,B2b,B2b·64K,—,
+configs,c=1 TTFT,B2c,B2c·GPU 读图,—,
+configs,c=1 TTFT,B2d,B2d·64K+2槽,0.16 s,
+configs,c=1 TTFT,B3,B3·推荐配置,0.15 s,
+configs,聚合吞吐峰值,R1,第一轮·共享 5090,122.0 tok/s（c=8）,
+configs,聚合吞吐峰值,B1,B1·独占 32K,220.0 tok/s（c=2）,
+configs,聚合吞吐峰值,B2a,B2a·parallel=4,179.3 tok/s（c=8）,
+configs,聚合吞吐峰值,B2b,B2b·64K,—,
+configs,聚合吞吐峰值,B2c,B2c·GPU 读图,—,
+configs,聚合吞吐峰值,B2d,B2d·64K+2槽,149.5 tok/s（c=8）,
+configs,聚合吞吐峰值,B3,B3·推荐配置,214.7 tok/s（c=8）,
+configs,新图片 TTFT,R1,第一轮·共享 5090,3.57 s,
+configs,新图片 TTFT,B1,B1·独占 32K,3.32 s,
+configs,新图片 TTFT,B2a,B2a·parallel=4,—,
+configs,新图片 TTFT,B2b,B2b·64K,—,
+configs,新图片 TTFT,B2c,B2c·GPU 读图,0.665 s,
+configs,新图片 TTFT,B2d,B2d·64K+2槽,0.824 s,
+configs,新图片 TTFT,B3,B3·推荐配置,0.534 s,
+configs,结论,R1,第一轮·共享 5090,显存不够，全程卡 PCIe,
+configs,结论,B1,B1·独占 32K,短上下文最快,
+configs,结论,B2a,B2a·parallel=4,多槽切碎缓存，吞吐/延迟双降,
+configs,结论,B2b,B2b·64K,43.7K 提示词可跑,
+configs,结论,B2c,B2c·GPU 读图,图片快 5.4 倍,
+configs,结论,B2d,B2d·64K+2槽,双槽拉低单流与聚合,
+configs,结论,B3,B3·推荐配置,最佳综合,
+startup,首次部署（含约 74 GB 模型下载）,B3,本机（B3）,2 h 54 min,可断点续传
+startup,冷启动到 /health 就绪,B3,本机（B3）,≈ 2 min,要装 31.64 GiB 进内存，别杀进程
+startup,重启（缓存已热）,B3,本机（B3）,55 s,模型留在卷里，不重下
+startup,带视觉编码器重启,B3,本机（B3）,254 s,首次多下约 0.9 GB 读图器
+official_bench,short · decode,R1,第一轮·共享,136.8 tok/s,+72%
+official_bench,short · decode,B3,第二轮·独占（B3）,235.4 tok/s,+72%
+official_bench,short · TTFT,R1,第一轮·共享,0.389 s,−41%
+official_bench,short · TTFT,B3,第二轮·独占（B3）,0.23 s,−41%
+official_bench,prompt-4k · prefill,R1,第一轮·共享,"1,710.5 tok/s",+106%
+official_bench,prompt-4k · prefill,B3,第二轮·独占（B3）,"3,520.6 tok/s",+106%
+official_bench,prompt-4k · TTFT,R1,第一轮·共享,2.416 s,−51%
+official_bench,prompt-4k · TTFT,B3,第二轮·独占（B3）,1.18 s,−51%
+official_bench,prompt-4k · decode,R1,第一轮·共享,132.6 tok/s,+55%
+official_bench,prompt-4k · decode,B3,第二轮·独占（B3）,205.7 tok/s,+55%
+official_bench,prompt-16k · prefill,R1,第一轮·共享,"3,314.4 tok/s",+67%
+official_bench,prompt-16k · prefill,B3,第二轮·独占（B3）,"5,528.9 tok/s",+67%
+official_bench,prompt-16k · TTFT,R1,第一轮·共享,4.99 s,−40%
+official_bench,prompt-16k · TTFT,B3,第二轮·独占（B3）,2.99 s,−40%
+official_bench,prompt-16k · decode,R1,第一轮·共享,134.8 tok/s,+62%
+official_bench,prompt-16k · decode,B3,第二轮·独占（B3）,218.4 tok/s,+62%
+official_bench,质量 sanity,R1,第一轮·共享,11 / 12（T4 工具调用失败）,缓存变大后行为更稳
+official_bench,质量 sanity,B3,第二轮·独占（B3）,12 / 12,缓存变大后行为更稳
+official_bench,21 个必需请求耗时,R1,第一轮·共享,81 s,−42%
+official_bench,21 个必需请求耗时,B3,第二轮·独占（B3）,47 s,−42%
+sustained,请求 / 成功,R1c4,第一轮 10 min @ c=4,385 / 385,全部 100%
+sustained,请求 / 成功,B1c4,第二轮 10 min @ c=4,660 / 660,全部 100%
+sustained,请求 / 成功,R1c1,第一轮 30 min @ c=1,"1,122 / 1,122",全部 100%
+sustained,请求 / 成功,B3c1,B3 10 min @ c=1,641 / 641,全部 100%
+sustained,请求速率,R1c4,第一轮 10 min @ c=4,0.63 req/s,+70%~+74%
+sustained,请求速率,B1c4,第二轮 10 min @ c=4,1.07 req/s,+70%~+74%
+sustained,请求速率,R1c1,第一轮 30 min @ c=1,37.19 req/min,+70%~+74%
+sustained,请求速率,B3c1,B3 10 min @ c=1,63.05 req/min,+70%~+74%
+sustained,聚合 token 吞吐,R1c4,第一轮 10 min @ c=4,119.0 tok/s,
+sustained,聚合 token 吞吐,B1c4,第二轮 10 min @ c=4,204.6 tok/s,
+sustained,聚合 token 吞吐,R1c1,第一轮 30 min @ c=1,—,
+sustained,聚合 token 吞吐,B3c1,B3 10 min @ c=1,—,
+sustained,TTFT p50 / p95,R1c4,第一轮 10 min @ c=4,4.958 / 5.238 s,
+sustained,TTFT p50 / p95,B1c4,第二轮 10 min @ c=4,2.89 / 3.10 s,
+sustained,TTFT p50 / p95,R1c1,第一轮 30 min @ c=1,0.240 / 0.258 s,
+sustained,TTFT p50 / p95,B3c1,B3 10 min @ c=1,0.147 / 0.176 s,
+sustained,TTFT max,R1c4,第一轮 10 min @ c=4,5.355 s,
+sustained,TTFT max,B1c4,第二轮 10 min @ c=4,3.16 s,
+sustained,TTFT max,R1c1,第一轮 30 min @ c=1,0.336 s,
+sustained,TTFT max,B3c1,B3 10 min @ c=1,0.206 s,
+sustained,Decode 均值 / p95,R1c4,第一轮 10 min @ c=4,141.63 / 159.25 tok/s,B3 最小值 192.41
+sustained,Decode 均值 / p95,B1c4,第二轮 10 min @ c=4,247.9 / 292 tok/s,B3 最小值 192.41
+sustained,Decode 均值 / p95,R1c1,第一轮 30 min @ c=1,140.55 / 157.46 tok/s,B3 最小值 192.41
+sustained,Decode 均值 / p95,B3c1,B3 10 min @ c=1,244.66 / 293.33 tok/s,B3 最小值 192.41
+sustained,漂移（前 / 后半程）,R1c4,第一轮 10 min @ c=4,TTFT 4.967→4.954 s,零漂移、零显存泄漏、零失败
+sustained,漂移（前 / 后半程）,B1c4,第二轮 10 min @ c=4,TTFT 2.884→2.889 s,零漂移、零显存泄漏、零失败
+sustained,漂移（前 / 后半程）,R1c1,第一轮 30 min @ c=1,—,零漂移、零显存泄漏、零失败
+sustained,漂移（前 / 后半程）,B3c1,B3 10 min @ c=1,—,零漂移、零显存泄漏、零失败
+vision,新图片 TTFT（3 张均值）,R1,第一轮·CPU 读图,3.57 s,6.7 倍差距
+vision,新图片 TTFT（3 张均值）,B2c,B2c·GPU 读图,0.665 s,6.7 倍差距
+vision,新图片 TTFT（3 张均值）,B3,B3·GPU 读图,0.534 s,6.7 倍差距
+vision,最小 / 最大,R1,第一轮·CPU 读图,3.50 / 3.61 s,
+vision,最小 / 最大,B2c,B2c·GPU 读图,0.50 / 0.97 s,
+vision,最小 / 最大,B3,B3·GPU 读图,0.49 / 0.61 s,
+vision,同一图片重复,R1,第一轮·CPU 读图,0.636 s,
+vision,同一图片重复,B2c,B2c·GPU 读图,0.437 s,
+vision,同一图片重复,B3,B3·GPU 读图,0.436 s,
+vision,显存代价,R1,第一轮·CPU 读图,0,"约 −1,220 槽 / −11 tok/s"
+vision,显存代价,B2c,B2c·GPU 读图,≈1.1 GiB,"约 −1,220 槽 / −11 tok/s"
+vision,显存代价,B3,B3·GPU 读图,≈1.1 GiB,"约 −1,220 槽 / −11 tok/s"
+host,GPU 利用率 均值,R1,第一轮·共享,89.1%,p95/max 均 100%
+host,GPU 利用率 均值,B1,第二轮 B1,84.3%,p95/max 均 100%
+host,GPU 利用率 均值,B3,第二轮 B3,89.8%,p95/max 均 100%
+host,显存占用,R1,第一轮·共享,"31,864 MiB（97.7%）",引擎把可用显存吃满放缓存，是正确行为
+host,显存占用,B1,第二轮 B1,"31,879 MiB（97.8%）",引擎把可用显存吃满放缓存，是正确行为
+host,显存占用,B3,第二轮 B3,"31,830 MiB（97.6%）",引擎把可用显存吃满放缓存，是正确行为
+host,温度 均值 / max,R1,第一轮·共享,44.5 / 53 ℃,
+host,温度 均值 / max,B1,第二轮 B1,52.8 / 59 ℃,
+host,温度 均值 / max,B3,第二轮 B3,52.1 / 55 ℃,
+host,功耗 均值 / max,R1,第一轮·共享,229.7 / 311 W,上限 575 W，B3 用掉 82%
+host,功耗 均值 / max,B1,第二轮 B1,336.7 / 472 W,上限 575 W，B3 用掉 82%
+host,功耗 均值 / max,B3,第二轮 B3,336.8 / 466 W,上限 575 W，B3 用掉 82%
+host,SM 频率 均值 / max,R1,第一轮·共享,"2,828 / 2,895 MHz",无降频
+host,SM 频率 均值 / max,B1,第二轮 B1,"2,820 / 2,887 MHz",无降频
+host,SM 频率 均值 / max,B3,第二轮 B3,"2,832 / 2,895 MHz",无降频
+host,CPU load1 均值 / max,R1,第一轮·共享,26.3 / 32.1,第二轮停掉 3 个 train_server
+host,CPU load1 均值 / max,B1,第二轮 B1,20.3 / 28.0,第二轮停掉 3 个 train_server
+host,CPU load1 均值 / max,B3,第二轮 B3,24.2 / 30.4,第二轮停掉 3 个 train_server
+host,内存已用 均值,R1,第一轮·共享,104.97 GiB,总 125.6 GiB
+host,内存已用 均值,B1,第二轮 B1,96.31 GiB,总 125.6 GiB
+host,内存已用 均值,B3,第二轮 B3,96.74 GiB,总 125.6 GiB
+host,MTP 投机接受率,R1,第一轮·共享,64.0%,
+host,MTP 投机接受率,B1,第二轮 B1,63.5%,
+host,MTP 投机接受率,B3,第二轮 B3,—,
+efficiency,绝对效率（tok/s per GiB 总显存）,R1,第一轮·共享,10.5,把固定开销算进分母，结论误导
+efficiency,绝对效率（tok/s per GiB 总显存）,B3,第二轮·独占,8.3,把固定开销算进分母，结论误导
+efficiency,边际效率（tok/s per GiB 专家缓存）,R1,第一轮·共享,—,线性、不递减，截距 91.9 tok/s（外推值，未实测）
+efficiency,边际效率（tok/s per GiB 专家缓存）,B3,第二轮·独占,6.53,线性、不递减，截距 91.9 tok/s（外推值，未实测）
+efficiency,能源效率（J / token）,R1,第一轮·共享,1.634 J,−19.6%
+efficiency,能源效率（J / token）,B3,第二轮·独占,1.314 J,−19.6%
+efficiency,功耗均值 / decode,R1,第一轮·共享,229.7 W / 140.6 tok/s,多花 47% 的电，做 82% 更多的活
+efficiency,功耗均值 / decode,B3,第二轮·独占,336.7 W / 256.2 tok/s,多花 47% 的电，做 82% 更多的活
+pcie,溢出 0 → 0.5% 之间,v,实测,231.8 → 141.4 tok/s（−39%）,断崖在这里，不是线性
+pcie,理论应有的掉速,v,实测,−6.6%,实测 −39%，差 6 倍 → 成本在流水线气泡，不在带宽
+pcie,同一 decode 数字可对应不同状态,v,实测,141 tok/s 在溢出 0.5% 和 3% 时都出现过,只报 decode 没有可比性，必须同时报溢出/命中率
+pcie,剩余未覆盖专家,v,实测,"20.5%（约 5,046 槽）",这台机器上剩下的最大单点收益
+sweep_r1,1,c,c,1,
+sweep_r1,1,聚合 tok/s,聚合 tok/s,86.8,
+sweep_r1,1,TTFT p50,TTFT p50,0.28 s,
+sweep_r1,1,TTFT p95,TTFT p95,0.46 s,
+sweep_r1,1,Decode p50,Decode p50,93.9,
+sweep_r1,2,c,c,2,
+sweep_r1,2,聚合 tok/s,聚合 tok/s,116.4,
+sweep_r1,2,TTFT p50,TTFT p50,1.63 s,
+sweep_r1,2,TTFT p95,TTFT p95,1.72 s,
+sweep_r1,2,Decode p50,Decode p50,150.5,
+sweep_r1,4,c,c,4,
+sweep_r1,4,聚合 tok/s,聚合 tok/s,119.4,
+sweep_r1,4,TTFT p50,TTFT p50,3.24 s,
+sweep_r1,4,TTFT p95,TTFT p95,5.11 s,
+sweep_r1,4,Decode p50,Decode p50,141.4,
+sweep_r1,8,c,c,8,
+sweep_r1,8,聚合 tok/s,聚合 tok/s,122.0,
+sweep_r1,8,TTFT p50,TTFT p50,6.23 s,
+sweep_r1,8,TTFT p95,TTFT p95,11.04 s,
+sweep_r1,8,Decode p50,Decode p50,144.6,
+sweep_r1,16,c,c,16,
+sweep_r1,16,聚合 tok/s,聚合 tok/s,118.6,
+sweep_r1,16,TTFT p50,TTFT p50,13.15 s,
+sweep_r1,16,TTFT p95,TTFT p95,22.66 s,
+sweep_r1,16,Decode p50,Decode p50,139.8,
+sweep_b1,1,c,c,1,
+sweep_b1,1,聚合 tok/s,聚合 tok/s,192.0,
+sweep_b1,1,TTFT p50,TTFT p50,0.16 s,
+sweep_b1,1,TTFT p95,TTFT p95,0.18 s,
+sweep_b1,1,Decode p50,Decode p50,204.3,
+sweep_b1,2,c,c,2,
+sweep_b1,2,聚合 tok/s,聚合 tok/s,220.0,
+sweep_b1,2,TTFT p50,TTFT p50,0.80 s,
+sweep_b1,2,TTFT p95,TTFT p95,1.09 s,
+sweep_b1,2,Decode p50,Decode p50,291.6,
+sweep_b1,4,c,c,4,
+sweep_b1,4,聚合 tok/s,聚合 tok/s,216.5,
+sweep_b1,4,TTFT p50,TTFT p50,1.94 s,
+sweep_b1,4,TTFT p95,TTFT p95,2.81 s,
+sweep_b1,4,Decode p50,Decode p50,253.7,
+sweep_b1,8,c,c,8,
+sweep_b1,8,聚合 tok/s,聚合 tok/s,213.2,
+sweep_b1,8,TTFT p50,TTFT p50,3.54 s,
+sweep_b1,8,TTFT p95,TTFT p95,6.29 s,
+sweep_b1,8,Decode p50,Decode p50,258.0,
+sweep_b1,16,c,c,16,
+sweep_b1,16,聚合 tok/s,聚合 tok/s,209.3,
+sweep_b1,16,TTFT p50,TTFT p50,7.28 s,
+sweep_b1,16,TTFT p95,TTFT p95,12.79 s,
+sweep_b1,16,Decode p50,Decode p50,254.0,
+sweep_b3,1,c,c,1,
+sweep_b3,1,聚合 tok/s,聚合 tok/s,186.0,
+sweep_b3,1,TTFT p50,TTFT p50,0.15 s,
+sweep_b3,1,Decode p50,Decode p50,218.9,
+sweep_b3,2,c,c,2,
+sweep_b3,2,聚合 tok/s,聚合 tok/s,211.8,
+sweep_b3,2,TTFT p50,TTFT p50,0.89 s,
+sweep_b3,2,Decode p50,Decode p50,259.2,
+sweep_b3,4,c,c,4,
+sweep_b3,4,聚合 tok/s,聚合 tok/s,211.6,
+sweep_b3,4,TTFT p50,TTFT p50,1.88 s,
+sweep_b3,4,Decode p50,Decode p50,247.2,
+sweep_b3,8,c,c,8,
+sweep_b3,8,聚合 tok/s,聚合 tok/s,214.7,
+sweep_b3,8,TTFT p50,TTFT p50,3.65 s,
+sweep_b3,8,Decode p50,Decode p50,262.6,
+longctx,第一轮 32K,配置,配置,第一轮 32K,
+longctx,第一轮 32K,提示词 token,提示词 token,"29,133",
+longctx,第一轮 32K,TTFT,TTFT,9.56 s,
+longctx,第一轮 32K,Prefill,Prefill,"3,047 tok/s",
+longctx,第一轮 32K,Decode,Decode,136.8 tok/s,
+longctx,第一轮 32K,结果,结果,通过,
+longctx,第一轮 32K,配置,配置,第一轮 32K,
+longctx,第一轮 32K,提示词 token,提示词 token,"34,941",
+longctx,第一轮 32K,TTFT,TTFT,—,
+longctx,第一轮 32K,Prefill,Prefill,—,
+longctx,第一轮 32K,Decode,Decode,—,
+longctx,第一轮 32K,结果,结果,400 超窗,
+longctx,第二轮 64K（int8 KV）,配置,配置,第二轮 64K（int8 KV）,
+longctx,第二轮 64K（int8 KV）,提示词 token,提示词 token,"29,133",
+longctx,第二轮 64K（int8 KV）,TTFT,TTFT,6.07 s,
+longctx,第二轮 64K（int8 KV）,Prefill,Prefill,"4,801 tok/s",
+longctx,第二轮 64K（int8 KV）,Decode,Decode,188.4 tok/s,
+longctx,第二轮 64K（int8 KV）,结果,结果,通过,
+longctx,第二轮 64K（int8 KV）,配置,配置,第二轮 64K（int8 KV）,
+longctx,第二轮 64K（int8 KV）,提示词 token,提示词 token,"37,845",
+longctx,第二轮 64K（int8 KV）,TTFT,TTFT,7.14 s,
+longctx,第二轮 64K（int8 KV）,Prefill,Prefill,"5,300 tok/s",
+longctx,第二轮 64K（int8 KV）,Decode,Decode,243.4 tok/s,
+longctx,第二轮 64K（int8 KV）,结果,结果,通过,
+longctx,第二轮 64K（int8 KV）,配置,配置,第二轮 64K（int8 KV）,
+longctx,第二轮 64K（int8 KV）,提示词 token,提示词 token,"43,677",
+longctx,第二轮 64K（int8 KV）,TTFT,TTFT,8.42 s,
+longctx,第二轮 64K（int8 KV）,Prefill,Prefill,"5,185 tok/s",
+longctx,第二轮 64K（int8 KV）,Decode,Decode,247.1 tok/s,
+longctx,第二轮 64K（int8 KV）,结果,结果,通过（上限）,
+longctx,B3 推荐 64K,配置,配置,B3 推荐 64K,
+longctx,B3 推荐 64K,提示词 token,提示词 token,"5,853",
+longctx,B3 推荐 64K,TTFT,TTFT,1.756 s,
+longctx,B3 推荐 64K,Prefill,Prefill,"3,333 tok/s",
+longctx,B3 推荐 64K,Decode,Decode,214.5 tok/s,
+longctx,B3 推荐 64K,结果,结果,通过,
+longctx,B3 推荐 64K,配置,配置,B3 推荐 64K,
+longctx,B3 推荐 64K,提示词 token,提示词 token,"23,301",
+longctx,B3 推荐 64K,TTFT,TTFT,4.503 s,
+longctx,B3 推荐 64K,Prefill,Prefill,"5,175 tok/s",
+longctx,B3 推荐 64K,Decode,Decode,224.7 tok/s,
+longctx,B3 推荐 64K,结果,结果,通过,
+longctx,B3 推荐 64K,配置,配置,B3 推荐 64K,
+longctx,B3 推荐 64K,提示词 token,提示词 token,"43,677",
+longctx,B3 推荐 64K,TTFT,TTFT,8.811 s,
+longctx,B3 推荐 64K,Prefill,Prefill,"4,957 tok/s",
+longctx,B3 推荐 64K,Decode,Decode,244.2 tok/s,
+longctx,B3 推荐 64K,结果,结果,通过（上限）,
+constants,每个专家槽位,,,1.318 MiB,两轮日志反推，完全一致
+constants,固定预留,,,700 MiB（系统）+ 184 MiB（投机解码头）= 884 MiB,
+constants,槽位上限,,,"24,576 = 48 层 × 512 专家",超过即 100% 覆盖
+constants,固定开销实测,,,"≈5.9 GiB（6,045 / 5,927 MiB）",几乎不随缓存大小变化（差 2%）
+constants,每 GiB 专家缓存,,,≈ +6.5 tok/s（拟合斜率 6.53）,线性，不递减
+constants,拟合截距,,,91.9 tok/s,缓存为 0 的外推值，未实测，不能当性能引用
+constants,PCIe 溢出敏感度,,,1% 溢出 ≈ −39% decode,成本在流水线气泡
+constants,KV Cache（int8 / 32K）,,,≈384 MiB,比直觉便宜得多
+constants,显存预算公式,,,"槽位数 = min(24576, (启动时空闲显存 − 884 MiB) / 1.318 MiB)",
+constants.reconciliation,"6.07 GiB = 6,215 MiB",,,"(6,215 − 884) / 1.318 = 4,045 / 4,043 / ✅",
+constants.reconciliation,"8.31 GiB = 8,509 MiB",,,"(8,509 − 884) / 1.318 = 5,786 / 5,784 / ✅",
+constants.reconciliation,"26.01 GiB = 26,634 MiB",,,"(26,634 − 884) / 1.318 = 19,537 / 19,530 / ✅",
+minimal_verification,判断 1,,,专家缓存覆盖 <30% → 瓶颈在显存，先腾卡再说别的。,
+minimal_verification,判断 2,,,覆盖 >75% 但 decode 仍 <200 tok/s → 瓶颈在 PCIe 与单 slot，换平台或加卡。,
+minimal_verification,判断 3,,,同一台机器上 decode 波动 >20% → 先看 PCIe 溢出率，不要先怀疑模型或参数。,

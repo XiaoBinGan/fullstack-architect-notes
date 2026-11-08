@@ -1,0 +1,170 @@
+{
+  "schema": "strata-script-manifest/v1",
+  "base_dir": "/workspace/Strata",
+  "script_count": 18,
+  "total_lines": 1985,
+  "scripts": [
+    {
+      "path": "02_launch.sh",
+      "group": "部署",
+      "purpose": "下载引擎+模型并拉起服务（官方 CLI 路线）",
+      "usage": "--context 64k --vision cpu --parallel 1 --port 8899 --tune skip",
+      "lines": 32,
+      "bytes": 722,
+      "sha256": "e3bd14a5b7dfd63f6a3b973a23756b1c5d0f268c5bc517470e8065b7f1c10423"
+    },
+    {
+      "path": "03_run_container.sh",
+      "group": "部署",
+      "purpose": "官方容器路线启动：随机 API key、seccomp=unconfined、只绑 GPU1",
+      "usage": "镜像 ghcr.nju.edu.cn/niko1221/strata:0.2.2-cuda13；--gpus device=1",
+      "lines": 40,
+      "bytes": 1197,
+      "sha256": "c75a5b82d11c8bf2baf6756ae99f00b558ce42f2ea2081d15dca2718df245006"
+    },
+    {
+      "path": "enable_vision.sh",
+      "group": "部署",
+      "purpose": "开启视觉输入（CPU 读图器），首次多下约 0.9 GB 读图器文件",
+      "usage": "VISION=cpu；带视觉编码器重启实测 254 s",
+      "lines": 47,
+      "bytes": 1517,
+      "sha256": "af5a7bd7247fef79a270f602f812fe2703a6a3399844b2729b9f5d2269919e91"
+    },
+    {
+      "path": "env.sh",
+      "group": "部署",
+      "purpose": "共享环境变量：把 HOME / XDG / TMPDIR / pip / HF 缓存全部收敛到 /workspace/Strata 内部",
+      "usage": "被 02_launch.sh 等 source；无参数",
+      "lines": 26,
+      "bytes": 1141,
+      "sha256": "fdfb445148be6cc07c11f87fb2bb76ca52e1d26019a4696a37b13a684dec10ba"
+    },
+    {
+      "path": "rebind_port.sh",
+      "group": "部署",
+      "purpose": "把端口从 127.0.0.1 重绑到 0.0.0.0，并顺带轮询 /health 判定就绪",
+      "usage": "warm 重启实测 55 s；模型留在卷里不重下",
+      "lines": 48,
+      "bytes": 1743,
+      "sha256": "717fa908fb4f8cc10d76d9f7c299e436cebb4d1790907d049288b1fac0a7a210"
+    },
+    {
+      "path": "client/extract_numbers.py",
+      "group": "压测",
+      "purpose": "把汇总结果直接打成 markdown 表格行，报告里的数字由它生成",
+      "usage": "输入：results/loadtest/ + longctx-supplement.json",
+      "lines": 55,
+      "bytes": 2510,
+      "sha256": "dbeecf72ef4fd382074ba06f3575e60d5105a4744a9a915e62c68c966d5838cc"
+    },
+    {
+      "path": "client/loadtest.py",
+      "group": "压测",
+      "purpose": "压测主程序，五个 stage 全在这里",
+      "usage": "--stages sweep,sustained,longctx,vision,overload --sweep-clients 1,2,4,8,16 --sustained-clients 4 --minutes 10 --out-tokens 192 --rounds 2",
+      "lines": 447,
+      "bytes": 18846,
+      "sha256": "bf9dc9e98a41ffb1d9bf41e295dabc85fb3a5d04700fad118057dde335113049"
+    },
+    {
+      "path": "client/loadtest_report.py",
+      "group": "压测",
+      "purpose": "把压测原始 json 汇总成可读报告",
+      "usage": "输入：results/loadtest/loadtest-*.json",
+      "lines": 123,
+      "bytes": 5065,
+      "sha256": "46ac1ac27f5c6b23b0ca6cbe20a920f03ba4d618bef206c562a09d81aaf39d3f"
+    },
+    {
+      "path": "client/metrics_sampler.py",
+      "group": "压测",
+      "purpose": "服务端 /metrics 采样，默认 5 s 一次，写 jsonl",
+      "usage": "用法：metrics_sampler.py OUT.jsonl SECONDS INTERVAL",
+      "lines": 45,
+      "bytes": 1727,
+      "sha256": "85ca4819b0a0eb1ee00a55956b694df32fdd6bbe0ba95dad0dcb4a8fda28c13d"
+    },
+    {
+      "path": "client/sampler.py",
+      "group": "压测",
+      "purpose": "宿主侧采样：GPU 利用率/显存/功耗/温度 + CPU + 内存，默认 2 s 一次",
+      "usage": "用法：sampler.py OUT.csv SECONDS INTERVAL",
+      "lines": 90,
+      "bytes": 2914,
+      "sha256": "2c0601b365e46be751cd8dcd2f159afffe16a89af6a3fe60d9d1e2ecd543d668"
+    },
+    {
+      "path": "run_loadtest.sh",
+      "group": "压测",
+      "purpose": "五类压测一键跑：先起两个采样器，再跑 sweep/sustained/longctx/vision/overload",
+      "usage": "MINUTES=${MINUTES:-10}；采样器 2 s / 5 s 间隔",
+      "lines": 37,
+      "bytes": 1241,
+      "sha256": "c914c75c3995edf906afea15982dcb06d1c276bba5af23f7418591d53e0b4f9e"
+    },
+    {
+      "path": "bucket_stats.py",
+      "group": "分析",
+      "purpose": "按命中率 / PCIe 溢出分桶统计 decode，坐实“1% 溢出掉 39%”",
+      "usage": "输入：hitrate_vs_decode.py 的产物",
+      "lines": 68,
+      "bytes": 3039,
+      "sha256": "8ef7a14055c0ac9dc3625c11fd7163948b146831d3f9e76258253873ce3cbbef"
+    },
+    {
+      "path": "hitrate_probe.sh",
+      "group": "分析",
+      "purpose": "先打几发请求，再把 /metrics 里的 per-request 遥测（hit_rate / pcie_share / decode）打印出来",
+      "usage": "依赖 /metrics 的 requests[] 字段",
+      "lines": 49,
+      "bytes": 2117,
+      "sha256": "45ba8910bf8793b2865d5bcf8441af19200f27e5b5eb3d5e63c6d1f94cc98c26"
+    },
+    {
+      "path": "hitrate_vs_decode.py",
+      "group": "分析",
+      "purpose": "从引擎日志里抽「缓存命中率 ↔ decode 速度」配对样本",
+      "usage": "输入：engine.log；输出 (hit_rate, decode_tok_s) 序列",
+      "lines": 68,
+      "bytes": 2814,
+      "sha256": "89a855b9ff81d0f4924dbf0c2615cf9c6cfcbc5d555c001b79629153b27faceb"
+    },
+    {
+      "path": "inspect_format.py",
+      "group": "分析",
+      "purpose": "读 GGUF 头与元数据（量化档位、tensor 数、上下文长度）",
+      "usage": "输入：GGUF 路径；纯标准库",
+      "lines": 194,
+      "bytes": 6288,
+      "sha256": "76f1007d7cb98347064408e51a84cbe9bb4c666cf1356cebc46d7927f4c67ec9"
+    },
+    {
+      "path": "inspect_tensors.py",
+      "group": "分析",
+      "purpose": "按量化类型统计 tensor 数与参数量，验证“Q2_0 其实是混合精度”",
+      "usage": "输入：GGUF 路径；输出分档表",
+      "lines": 142,
+      "bytes": 4777,
+      "sha256": "d56e1b1a1e6186f5f226830f3f4069079cf689e3e5b92a57510501027107e12c"
+    },
+    {
+      "path": "client/verify.py",
+      "group": "验证",
+      "purpose": "冒烟验证：/health、/v1/models、completions、chat、图片输入五类探针",
+      "usage": "--server --keyfile --out verify.json",
+      "lines": 215,
+      "bytes": 8843,
+      "sha256": "691f2f8c9a87fa8f9724da8965b05316af166d2fa4d8669262335ca5688b0111"
+    },
+    {
+      "path": "gen_manifest.py",
+      "group": "工具",
+      "purpose": "生成本清单（行数/字节/sha256 全部实测），--check 可校验附件未被改动",
+      "usage": "python3 gen_manifest.py [--check]",
+      "lines": 259,
+      "bytes": 9546,
+      "sha256": "96cf184b7cd0ef0a2db0f9d3181f92e8e24bee05807f86636eb05ee11e2084c4"
+    }
+  ]
+}
